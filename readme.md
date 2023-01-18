@@ -1,6 +1,6 @@
 # Arbor Development Env Recipe
 
-A spack stack with everything needed to develop Arbor on Hohgant.
+A spack stack with everything needed to develop Arbor on for the A100 nodes on Hohgant.
 
 This guide walks us through the process of configuring a spack stack, building and using it.
 
