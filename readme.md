@@ -1,40 +1,83 @@
 # Arbor Development Env Recipe
 
-A spack stack with everything needed to develop Arbor on Hohgant, to illustrate how to specify, build and use a spack stack squashfs image.
+A spack stack with everything needed to develop Arbor on Hohgant.
 
+This guide walks us through the process of configuring a spack stack, building and using it.
+
+Arbor is a C++ library, with optional support for CUDA, MPI and Python. An Arbor developer would ideally have an environment that provides everything needed to build Arbor with these options enabled.
+
+The full list of all of the Spack packages needed to build a full-featured CUDA version is:
+- MPI: `cray-mpich-binary`
+- compiler: `gcc@11`
+- Python: `python@3.10`
+- CUDA: `cuda@11.8`
+- `cmake`
+- `fmt`
+- `pugixml`
+- `nlohmann-json`
+- `random123`
+- `py-mpi4py`
+- `py-numpy`
+- `py-pybind11`
+- `py-sphinx`
+- `py-svgwrite`
+
+For the compiler, we choose `gcc@11`, which is compatible with cuda@11.8.
+
+## Write the Recipe
+
+Spack stacks start with a declarative recipe, written in yaml.
+
+- GCC 11 is specified in [`compilers.yaml`](compilers.yaml).
+- Hohgant is specified in [`config.yaml`](config.yaml).
+- The rules for generating modules in [`modules.yaml`](modules.yaml).
+- The packages in [`packages.yaml`](packages.yaml).
 
 ## Building a Software Stack
+
+Parallel builds in memory (`/dev/shm`)  are great!
+Stepping on the toes of other users on the login nodes is not great!
+Work on a compute node.
+
+```bash
+salloc -t180 -N1 --partition=cpu
+ssh nid003193
+```
+
+> **Note**
+> Build on the compute node architecture that you are targetting.
+> At least the same CPU type, however if targetting CUDA you will also need a
+> node that has the NVIDIA drivers installed.
 
 Download and configure sstool:
 
 ```bash
 git clone git@github.com:bcumming/sstool.git
 export PATH=$(pwd)/sstool:$PATH
+sstool --help
 ```
 
 Spack stacks start with a declarative recipe, written in yaml.
-This repository is one such recipe, which we can and configure.
-
-> **Note**
-> This step is equivalent to running configure or cmake - we are converting a description of
-> what to build into a set of Makefiles and sources that are run to the software stack.
+This repository is one such recipe.
 
 ```bash
 git clone git@github.com:bcumming/arbor-recipe.git
+```
 
+Use sstool to configure the recipe.
+
+> **Note**
+> This step is equivalent to running configure or cmake - the input is a
+> description of what to build, the output is a set of Makefiles and sources
+> that are run to build the software stack.
+
+```bash
 # -r: the source path for the recipe
 # -b: the path for the out of tree build
 sstool -rarbor-recipe -b/dev/shm/bcumming/arbor
 ```
 
-The recipe is configured in the build path, and is literally equivalent to
-the `make` step in building software
-
-> **Note**
-> Always call make with `env --ignore-environment` to ensure a clean environment
-> when running the build. This increases reproducability, and isolates the build process
-> from arbitrary changes to the environment (which are very rare, but you can't
-> be too careful.)
+Next we literally perform the `make` step in building software, where the final target is a squashfs file with the development environment.
 
 ```bash
 cd /dev/shm/bcumming/arbor
@@ -44,24 +87,41 @@ env --ignore-environment PATH=/usr/bin:/bin:`pwd`/spack/bin make store.squashfs
 mv store.squashfs $SCRATCH/arbor.squashfs
 ```
 
-don't forget to delete your temporary working path if you used `/dev/shm` - it uses memory on the node, and won't be cleaned up automatically when you log out or your allocation finishes.
+> **Note**
+> Always call make with `env --ignore-environment` to ensure a clean environment
+> when running the build. This increases reproducability, and isolates the build process
+> from arbitrary changes to the environment (which are very rare, but you can't
+> be too careful.)
 
-## Build the Software
+Don't forget to delete your temporary working path if you used `/dev/shm` - it uses memory on the node, and won't be cleaned up automatically when you log out or your allocation finishes.
 
+## Using the stack to build
+
+To start a new process with the image mounted on a node that you are logged into (login or compute), use the `squashfs-{mount,run}` utilities.
+The image was configured to be mounted at `/user-environment`, which is the location that `squashfs-run` will always mount images.
 
 ```bash
-# Start a new process with the squashfs image mounted at /user-environment
-# with a shell. The 
 squashfs-mount $SCRATCH/arbor.squashfs /user-environment bash
 squashfs-run $SCRATCH/arbor.squashfs bash
 ```
 
-Set up my module environment
+The squashfs images can be used as a Spack upstream, and optionally can provide a module environment.
+
+The upstream Spack configuration is in `$mount/config`:
+
+```bash
+ls /user-environment/config
+```
+
+I am old-fashioned, so I will use modules to build Arbor.
+
 ```bash
 module use /user-environment/modules/
 module avail
 module load cmake gcc cray-mpich fmt ninja nlohmann-json random123 python cuda pugixml py-pybind11
 ```
+
+Through the magic of CMake we build our software:
 
 ```
 git clone git@github.com:arbor-sim/arbor.git
@@ -69,9 +129,8 @@ cd arbor/
 mkdir build
 cd build/
 CC=mpicc CXX=mpic++ cmake .. -G Ninja -DARB_WITH_MPI=on -DARB_WITH_PYTHON=on -DARB_GPU=cuda
+ninja examples pyarb
 ```
-
-I will build with the modules.
 
 ## Run the application
 
@@ -83,9 +142,9 @@ srun -n1 --partition=cpu ./bin/ring
 /scratch/e1000/bcumming/arbor/build/./bin/ring: error while loading shared libraries: libpugixml.so.1: cannot open shared object file: No such file or directory
 ```
 
-When `squashfs-mount` or `squashfs-run` was used to mount the image to build the application, it was only mounted for the one process on the login node. Other users on the login node don't see the mounted image, likewise it is not mounted on the compute node.
+When `squashfs-mount` or `squashfs-run` was used to mount the image to build the application, it was only mounted for the one process on that node. Other users/processes on the node don't see the mounted image, likewise it won't be mounted on the compute nodes `srun` will launch the MPI ranks on.
 
-A SLURM plugin installed on Hohgant (developed by @simonpintarelli and @jpcoles) accepts a flag to mount an image for rank on the compute nodes.
+A SLURM plugin installed on Hohgant (developed by @simonpintarelli and @jpcoles) accepts a flag to mount an image for each rank on the compute nodes.
 
 ```bash
 srun -n1 --partition=cpu --uenv-mount-file=$SCRATCH/arbor.squashfs ./bin/ring
@@ -97,18 +156,3 @@ srun -n1 --partition=cpu --uenv-mount-file=$SCRATCH/arbor.squashfs ./bin/ring
 > and the plugin will also automatically mount images that have been mounted by the caller of
 > srun/salloc/sbatch if no flags are explicitly set.
 
-## The Packages
-
-- `cmake`
-- `fmt`
-- `pugixml`
-- `nlohmann-json`
-- `random123`
-- `cuda@11.8`
-- `cray-mpich-binary`
-- `py-mpi4py`
-- `python@3.10`
-- `py-numpy`
-- `py-pybind11`
-- `py-sphinx`
-- `py-svgwrite`
