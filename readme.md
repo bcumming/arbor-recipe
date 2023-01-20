@@ -53,7 +53,8 @@ Download and configure sstool:
 
 ```bash
 git clone git@github.com:bcumming/sstool.git
-export PATH=$(pwd)/sstool:$PATH
+cd sstool && ./bootstrap.sh && ..
+export PATH=$(pwd)/sstool/bin:$PATH
 sstool --help
 ```
 
