@@ -49,13 +49,13 @@ ssh nid003193
 > At least the same CPU type, however if targetting CUDA you will also need a
 > node that has the NVIDIA drivers installed.
 
-Download and configure sstool:
+Download and configure stackinator:
 
 ```bash
-git clone git@github.com:bcumming/sstool.git
-cd sstool && ./bootstrap.sh && ..
-export PATH=$(pwd)/sstool/bin:$PATH
-sstool --help
+git clone git@github.com:eth-cscs/stackinator.git
+(cd stackinator && ./bootstrap.sh)
+export PATH=$(pwd)/stackinator/bin:$PATH
+stack-config --help
 ```
 
 Spack stacks start with a declarative recipe, written in yaml.
@@ -65,7 +65,7 @@ This repository is one such recipe.
 git clone git@github.com:bcumming/arbor-recipe.git
 ```
 
-Use sstool to configure the recipe.
+Use `stack-config` to configure the recipe.
 
 > **Note**
 > This step is equivalent to running configure or cmake - the input is a
@@ -75,7 +75,7 @@ Use sstool to configure the recipe.
 ```bash
 # -r: the source path for the recipe
 # -b: the path for the out of tree build
-sstool -rarbor-recipe -b/dev/shm/bcumming/arbor
+stack-config -rarbor-recipe -b/dev/shm/bcumming/arbor
 ```
 
 Next we literally perform the `make` step in building software, where the final target is a squashfs file with the development environment.

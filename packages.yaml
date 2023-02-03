@@ -3,6 +3,9 @@ packages:
       compiler:
           toolchain: gcc
           spec: gcc@11
+      mpi:
+          spec: cray-mpich-binary
+          gpu: Null
       unify: true
       specs:
       - cuda@11.8
@@ -21,6 +24,7 @@ packages:
       - py-pip
       - cmake
       - ninja
-      mpi:
-          spec: cray-mpich-binary
-          gpu: Null
+      packages:
+      - perl
+      - diffutils
+      - gettext
