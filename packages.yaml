@@ -1,8 +1,8 @@
 packages:
     gcc-env:
       compiler:
-          toolchain: gcc
-          spec: gcc@11
+          - toolchain: gcc
+            spec: gcc@11
       mpi:
           spec: cray-mpich-binary
           gpu: Null
