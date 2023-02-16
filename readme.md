@@ -31,7 +31,25 @@ Spack stacks start with a declarative recipe, written in yaml.
 - GCC 11 is specified in [`compilers.yaml`](compilers.yaml).
 - Hohgant is specified in [`config.yaml`](config.yaml).
 - The rules for generating modules in [`modules.yaml`](modules.yaml).
-- The packages in [`packages.yaml`](packages.yaml).
+- The environments in [`environments.yaml`](environments.yaml).
+
+## Get the tool
+
+### Method 1: GitHub
+
+```bash
+git clone git@github.com:eth-cscs/stackinator.git
+(cd stackinator && ./bootstrap.sh)
+export PATH=$(pwd)/stackinator/bin:$PATH
+stack-config --help
+```
+
+### Method 2: Pip
+
+```bash
+pip install stackinator
+stack-config --help
+```
 
 ## Building a Software Stack
 
@@ -48,15 +66,6 @@ ssh nid003193
 > Build on the compute node architecture that you are targetting.
 > At least the same CPU type, however if targetting CUDA you will also need a
 > node that has the NVIDIA drivers installed.
-
-Download and configure stackinator:
-
-```bash
-git clone git@github.com:eth-cscs/stackinator.git
-(cd stackinator && ./bootstrap.sh)
-export PATH=$(pwd)/stackinator/bin:$PATH
-stack-config --help
-```
 
 Spack stacks start with a declarative recipe, written in yaml.
 This repository is one such recipe.
@@ -78,13 +87,14 @@ Use `stack-config` to configure the recipe.
 stack-config -rarbor-recipe -b/dev/shm/bcumming/arbor
 ```
 
-Next we literally perform the `make` step in building software, where the final target is a squashfs file with the development environment.
+Next perform the `make` step in building software, where the final target is a squashfs file with the development environment.
 
 ```bash
+# build the image
 cd /dev/shm/bcumming/arbor
-env --ignore-environment PATH=/usr/bin:/bin:`pwd`/spack/bin make modules -j64
-env --ignore-environment PATH=/usr/bin:/bin:`pwd`/spack/bin make store.squashfs
+env --ignore-environment PATH=/usr/bin:/bin:`pwd`/spack/bin make store.squashfs -j64
 
+# save the image
 mv store.squashfs $SCRATCH/arbor.squashfs
 ```
 
@@ -148,12 +158,5 @@ When `squashfs-mount` or `squashfs-run` was used to mount the image to build the
 A SLURM plugin installed on Hohgant (developed by @simonpintarelli and @jpcoles) accepts a flag to mount an image for each rank on the compute nodes.
 
 ```bash
-srun -n1 --partition=cpu --uenv-mount-file=$SCRATCH/arbor.squashfs ./bin/ring
+srun -n1 --partition=cpu --uenv-file=$SCRATCH/arbor.squashfs ./bin/ring
 ```
-
-> **Note**
->
-> The command line flags for the plugin are going to change to `--uenv-file` and `--uenv-mount`,
-> and the plugin will also automatically mount images that have been mounted by the caller of
-> srun/salloc/sbatch if no flags are explicitly set.
-

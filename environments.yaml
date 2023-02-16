@@ -1,0 +1,29 @@
+gcc-env:
+  compiler:
+      - toolchain: gcc
+        spec: gcc@11
+  mpi:
+      spec: cray-mpich
+      gpu: Null
+  unify: true
+  specs:
+  - cuda@11.8
+  - osu-micro-benchmarks@5.9
+  - fmt
+  - pugixml
+  - nlohmann-json
+  - random123
+  - cuda@11.8
+  - py-mpi4py
+  - python@3.10
+  - py-numpy
+  - py-pybind11
+  - py-sphinx
+  - py-svgwrite
+  - py-pip
+  - cmake
+  - ninja
+  packages:
+  - perl
+  - diffutils
+  - gettext

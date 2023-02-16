@@ -3,6 +3,6 @@ store: /user-environment
 system: hohgant
 spack:
   repo: https://github.com/spack/spack.git
-  commit: v0.19.0
+  commit: releases/v0.19
 mirror:
   enable: false
